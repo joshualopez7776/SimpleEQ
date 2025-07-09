@@ -2,9 +2,9 @@
 
 **A 3-band equalizer VST/AU audio plugin built with JUCE, featuring customizable filters and real-time FFT-based frequency visualization.**
 
-![SimpleEQ GUI](DemoContent\SimpleEQDemoScreenshot.png)
+![SimpleEQ GUI](DemoContent/SimpleEQDemoScreenshot.png)
 
-![SimpleEQ GUI](DemoContent\SimpleEQDemoVidGIF.gif)
+![SimpleEQ GUI](DemoContent/SimpleEQDemoVidGIF.gif)
 
 ## Overview
 
