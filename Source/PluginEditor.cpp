@@ -9,6 +9,22 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+/**
+ * @brief Draws a custom rotary slider with a filled ellipse and value display.
+ *
+ * Renders a rotary slider with a purple fill, orange outline, and a value label
+ * that updates dynamically based on the slider’s position.
+ *
+ * @param g The graphics context for drawing.
+ * @param x The x-coordinate of the slider.
+ * @param y The y-coordinate of the slider.
+ * @param width The width of the slider.
+ * @param height The height of the slider.
+ * @param sliderPosProportional The normalized slider position (0 to 1).
+ * @param rotaryStartAngle The start angle of the rotary arc (radians).
+ * @param rotaryEndAngle The end angle of the rotary arc (radians).
+ * @param slider The slider component.
+ */
 void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     int x,
     int y,
@@ -68,6 +84,17 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
     }
 }
 
+/**
+ * @brief Draws a custom toggle button for bypass and analyzer controls.
+ *
+ * Renders PowerButton as an arc with an on/off indicator and AnalyzerButton with a
+ * random path to simulate an FFT display.
+ *
+ * @param g The graphics context.
+ * @param toggleButton The toggle button component.
+ * @param shouldDrawButtonAsHighlighted True if the button is highlighted.
+ * @param shouldDrawButtonAsDown True if the button is pressed.
+ */
 void LookAndFeel::drawToggleButton(
     juce::Graphics& g,
     juce::ToggleButton& toggleButton,
@@ -124,6 +151,14 @@ void LookAndFeel::drawToggleButton(
 
 }
 //==============================================================================
+/**
+ * @brief Paints the rotary slider and its labels.
+ *
+ * Draws the slider using the custom LookAndFeel and adds labels at specified positions
+ * around the slider’s circumference.
+ *
+ * @param g The graphics context.
+ */
 void RotarySliderWithLabels::paint(juce::Graphics& g)
 {
     using namespace juce;
@@ -178,6 +213,13 @@ void RotarySliderWithLabels::paint(juce::Graphics& g)
     }
 }
 
+/**
+ * @brief Calculates the bounds for the rotary slider.
+ *
+ * Centers the slider within the component, reserving space for labels.
+ *
+ * @return The bounding rectangle for the slider.
+ */
 juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
 {
     auto bounds = getLocalBounds();
@@ -193,6 +235,13 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
     return r;
 }
 
+/**
+ * @brief Generates the display string for the slider value.
+ *
+ * Formats the value with units (e.g., "Hz", "dB") and adds "k" for frequencies above 999 Hz.
+ *
+ * @return The formatted display string.
+ */
 juce::String RotarySliderWithLabels::getDisplayString() const
 {
     if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param))
@@ -233,6 +282,15 @@ juce::String RotarySliderWithLabels::getDisplayString() const
 }
 
 //==============================================================================
+
+/**
+ * @brief Constructs the response curve component.
+ *
+ * Initializes the FFT path producers and registers as a listener for parameter changes.
+ * Starts a timer for periodic updates.
+ *
+ * @param p The SimpleEQAudioProcessor instance.
+ */
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p),
 leftPathProducer(audioProcessor.leftChannelFifo),
 rightPathProducer(audioProcessor.rightChannelFifo)
@@ -248,6 +306,11 @@ rightPathProducer(audioProcessor.rightChannelFifo)
     startTimerHz(60);
 }
 
+/**
+ * @brief Destructor.
+ *
+ * Removes parameter listeners and stops the timer.
+ */
 ResponseCurveComponent::~ResponseCurveComponent()
 {
     const auto& params = audioProcessor.getParameters();
@@ -257,15 +320,32 @@ ResponseCurveComponent::~ResponseCurveComponent()
     }
 }
 
+/**
+ * @brief Handles parameter value changes.
+ *
+ * Sets a flag to trigger filter chain and response curve updates.
+ *
+ * @param parameterIndex The index of the changed parameter.
+ * @param newValue The new parameter value.
+ */
 void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float newValue)
 {
     parametersChanged.set(true);
 }
 
+/**
+ * @brief Processes audio data to generate an FFT path.
+ *
+ * Copies audio data from the FIFO, generates FFT data, and produces a path for visualization.
+ *
+ * @param fftBounds The rendering area bounds.
+ * @param sampleRate The audio sample rate.
+ */
 void PathProducer::process(juce::Rectangle<float> fftBounds, double sampleRate)
 {
     juce::AudioBuffer<float> tempIncomingBuffer;
 
+    // Process all available audio buffers
     while (leftChannelFifo->getNumCompleteBuffersAvailable() > 0)
     {
         if (leftChannelFifo->getAudioBuffer(tempIncomingBuffer))
@@ -317,6 +397,9 @@ void PathProducer::process(juce::Rectangle<float> fftBounds, double sampleRate)
     }
 }
 
+/**
+ * @brief Updates the response curve and FFT visualization periodically.
+ */
 void ResponseCurveComponent::timerCallback()
 {
     if(shouldShowFFTAnalysis)
@@ -338,6 +421,11 @@ void ResponseCurveComponent::timerCallback()
     repaint();
 }
 
+/**
+ * @brief Updates the filter chain for the response curve.
+ *
+ * Applies current parameter settings to the mono filter chain for visualization.
+ */
 void ResponseCurveComponent::updateChain()
 {
     auto chainSettings = getChainSettings(audioProcessor.apvts);
@@ -356,6 +444,14 @@ void ResponseCurveComponent::updateChain()
     updateCutFilter(monoChain.get<ChainPositions::HighCut>(), highCutCoefficients, chainSettings.highCutSlope);
 }
 
+/**
+ * @brief Paints the response curve and FFT visualization.
+ *
+ * Draws a grid with frequency and gain markers, the EQ response curve, and optional
+ * FFT paths for both channels.
+ *
+ * @param g The graphics context.
+ */
 void ResponseCurveComponent::paint(juce::Graphics& g)
 {
     using namespace juce;
@@ -450,6 +546,9 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
     g.strokePath(responseCurve, PathStrokeType(2.f));
 }
 
+/**
+ * @brief Updates the background grid when the component is resized.
+ */
 void ResponseCurveComponent::resized()
 {
     using namespace juce;
@@ -457,6 +556,7 @@ void ResponseCurveComponent::resized()
 
     Graphics g(background);
 
+    // Define frequency markers
     Array<float> freqs
     {
         20, 50, 100,
@@ -560,6 +660,13 @@ void ResponseCurveComponent::resized()
     }
 }
 
+/**
+ * @brief Returns the rendering area for the response curve.
+ *
+ * Excludes margins from the component bounds.
+ *
+ * @return The rendering area bounds.
+ */
 juce::Rectangle<int> ResponseCurveComponent::getRenderArea()
 {
     auto bounds = getLocalBounds();
@@ -572,6 +679,13 @@ juce::Rectangle<int> ResponseCurveComponent::getRenderArea()
     return bounds;
 }
 
+/**
+ * @brief Returns the analysis area for FFT visualization.
+ *
+ * Further reduces the render area to reserve space for borders.
+ *
+ * @return The analysis area bounds.
+ */
 juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
 {
     auto bounds = getRenderArea();
@@ -581,6 +695,13 @@ juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
 }
 
 //==============================================================================
+/**
+ * @brief Constructs the editor with sliders, buttons, and response curve.
+ *
+ * Initializes GUI components, attaches them to parameters, and sets up bypass logic.
+ *
+ * @param p The SimpleEQAudioProcessor instance.
+ */
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p),
     peakFreqSlider(*audioProcessor.apvts.getParameter("Peak Freq"), "Hz"),
@@ -686,6 +807,11 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
     setSize (600, 480);
 }
 
+/**
+* @brief Destructor.
+*
+* Removes custom LookAndFeel from buttons to prevent memory leaks.
+*/
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
     peakBypassButton.setLookAndFeel(nullptr);
@@ -695,6 +821,13 @@ SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 }
 
 //==============================================================================
+/**
+ * @brief Paints the editor’s background.
+ *
+ * Fills the background with a solid black color.
+ *
+ * @param g The graphics context.
+ */
 void SimpleEQAudioProcessorEditor::paint (juce::Graphics& g)
 {
     using namespace juce;
@@ -704,6 +837,9 @@ void SimpleEQAudioProcessorEditor::paint (juce::Graphics& g)
 
 }
 
+/**
+ * @brief Lays out sliders, buttons, and the response curve component.
+ */
 void SimpleEQAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
@@ -744,6 +880,11 @@ void SimpleEQAudioProcessorEditor::resized()
     peakQualitySlider.setBounds(bounds);
 }
 
+/**
+ * @brief Returns a list of all GUI components.
+ *
+ * @return A vector of pointers to sliders, buttons, and the response curve component.
+ */
 std::vector<juce::Component*> SimpleEQAudioProcessorEditor::getComps()
 {
     return
